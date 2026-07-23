@@ -24,3 +24,7 @@ export const db = getFirestore(app);
 
 // single shared document holding all product/pricing data
 export const PRODUCTS_DOC_PATH = ["app_data", "products"];
+
+// where saved quotations live, and the counter used to hand out serial numbers
+export const QUOTATIONS_COLLECTION = "quotations";
+export const QUOTATION_COUNTER_DOC_PATH = ["app_data", "quotationCounter"];
