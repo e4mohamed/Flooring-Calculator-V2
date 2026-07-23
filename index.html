@@ -53,6 +53,7 @@
     <p>إيبوكسي وبولي يوريثان - Stafloor Product Line</p>
   </div>
   <a class="nav-link" href="products.html">📋 كشف المنتجات والأسعار (الأدمن)</a>
+  <a class="nav-link" href="admin-quotations.html">🧾 عروض الأسعار المحفوظة (الأدمن)</a>
   <button class="nav-link" id="installAppBtn" style="display:none; cursor:pointer; background:var(--brand); color:#fff; border-color:var(--brand);">⬇ تثبيت التطبيق</button>
 </header>
 
@@ -115,8 +116,6 @@
 <footer>STAC for Chemical Industries — حاسبة داخلية لتقدير الكميات والتكلفة (الأسعار للتقدير الداخلي فقط)</footer>
 
 <script type="module">
-import { db, PRODUCTS_DOC_PATH } from "./firebase-config.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { rawProducts, auxMaterials, mixtures, applyProductsData, getPrice, getName, getSelectableItems } from "./defaults.js";
 
 // ---------------------------------------------------------------------
@@ -431,6 +430,8 @@ recalcAll();
   const statusEl = document.getElementById("liveStatus");
   if(statusEl) statusEl.textContent = "جارٍ التحقق من وجود تحديثات للأسعار...";
   try{
+    const { db, PRODUCTS_DOC_PATH } = await import("./firebase-config.js");
+    const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
     const snap = await getDoc(doc(db, ...PRODUCTS_DOC_PATH));
     if(snap.exists()){
       applyProductsData(snap.data());
