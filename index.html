@@ -109,7 +109,6 @@
     <span id="quoteSelCount">لم يتم اختيار أي نظام بعد — ضع علامة "أضف للعرض" على الأنظمة المطلوبة</span>
     <button id="generateQuoteBtn" disabled>📄 إنشاء عرض سعر للأنظمة المختارة</button>
   </div>
-  <p id="quoteSaveStatus" style="font-size:11.5px; color:var(--ink-soft); text-align:center; margin:8px 2px 0;"></p>
 
 </div>
 
@@ -117,7 +116,7 @@
 
 <script type="module">
 import { db, PRODUCTS_DOC_PATH } from "./firebase-config.js";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { rawProducts, auxMaterials, mixtures, applyProductsData, getPrice, getName, getSelectableItems } from "./defaults.js";
 
 // ---------------------------------------------------------------------
@@ -404,18 +403,6 @@ document.getElementById("generateQuoteBtn").addEventListener("click", ()=>{
     return;
   }
   window.open("quotation.html", "_blank");
-
-  // save a copy in Firestore for record-keeping (fire-and-forget, doesn't block opening the quote)
-  const saveStatus = document.getElementById("quoteSaveStatus");
-  if(saveStatus) saveStatus.textContent = "💾 جارٍ حفظ نسخة من العرض في قاعدة البيانات...";
-  addDoc(collection(db, "quotations"), { ...data, createdAt: serverTimestamp() })
-    .then(()=>{
-      if(saveStatus) saveStatus.textContent = "✓ تم حفظ نسخة من هذا العرض في قاعدة البيانات";
-    })
-    .catch(err=>{
-      console.error("تعذر حفظ نسخة من عرض السعر في قاعدة البيانات:", err);
-      if(saveStatus) saveStatus.textContent = "⚠ تعذر حفظ نسخة من العرض في قاعدة البيانات (تم فتح العرض على أي حال)";
-    });
 });
 
 // default the date field to today, still editable
