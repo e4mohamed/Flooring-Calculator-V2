@@ -13,12 +13,15 @@ const APP_SHELL = [
   "./index.html",
   "./products.html",
   "./quotation.html",
+  "./admin-quotations.html",
   "./style.css",
   "./defaults.js",
   "./firebase-config.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/screenshot-wide.png",
+  "./icons/screenshot-narrow.png",
 ];
 
 self.addEventListener("install", event=>{
