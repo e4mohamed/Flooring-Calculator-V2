@@ -96,6 +96,12 @@
     font-weight:700; display:inline-flex; align-items:center; gap:6px;
   }
   .lftset span.print-btn:hover{opacity:.9;}
+  .lftset span.save-btn{
+    cursor:pointer; background:#2f9e44; color:#fff; padding:6px 16px; border-radius:20px;
+    font-weight:700; display:inline-flex; align-items:center; gap:6px; margin-inline-end:10px;
+  }
+  .lftset span.save-btn:hover{opacity:.9;}
+  .lftset span.save-btn.is-saved{background:#5a6b76;}
   @media print{
     body{background:#fff; padding:0;}
     .sheet{box-shadow:none; border-radius:0; padding:14px 6px; max-width:100%;}
@@ -195,14 +201,19 @@
     <div class="settings">
       <div class="ritset">العملة: <span id="currency" contenteditable="true">ج.م</span></div>
       <div class="lftset">
+        <span class="save-btn" id="saveQuoteBtn">💾 حفظ عرض السعر في قاعدة البيانات</span>
         <span class="print-btn" onclick="window.print()">🖨 طباعة / تصدير PDF</span>
       </div>
     </div>
+    <p id="saveStatus" style="font-size:12px; color:var(--ink-soft); text-align:left; margin-top:8px;"></p>
   </aside>
 
 </div>
 
-<script>
+<script type="module">
+import { db, QUOTATIONS_COLLECTION, QUOTATION_COUNTER_DOC_PATH } from "./firebase-config.js";
+import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 (function(){
   const invBody = document.getElementById("invBody");
   let groupCounter = 0;
@@ -376,6 +387,89 @@
       }
     });
   }
+
+  // ---------------------------------------------------------------------
+  // Save to database: gathers the CURRENT (possibly hand-edited) state of
+  // the quotation and stores it in Firestore. First save gets a new serial
+  // number from the shared counter; later saves just update that same
+  // document (no new number is issued).
+  // ---------------------------------------------------------------------
+  let savedDocId = null;
+  let savedQuoteNumber = null;
+
+  function collectCurrentData(){
+    const items = [];
+    invBody.querySelectorAll("tr").forEach(tr=>{
+      if(tr.classList.contains("group-row")){
+        items.push({
+          group: true,
+          title: tr.querySelector("span[contenteditable]").textContent.trim(),
+        });
+      } else {
+        items.push({
+          group: false,
+          title: tr.querySelector("span[contenteditable]").textContent.trim(),
+          price: parseFloat(tr.querySelector(".price-cell").textContent) || 0,
+          qty: parseFloat(tr.querySelector(".qty-cell").textContent) || 0,
+          total: parseFloat(tr.querySelector(".row-total").textContent) || 0,
+        });
+      }
+    });
+
+    return {
+      projectName: document.getElementById("projectName").value || "",
+      projectAddress: document.getElementById("projectAddress").value || "",
+      responsiblePerson: document.getElementById("responsiblePerson").value || "",
+      phoneNumber: document.getElementById("phoneNumber").value || "",
+      quoteDate: document.getElementById("quoteDate").textContent.trim(),
+      currency: currentPrefix(),
+      subtotal: parseFloat(document.getElementById("subtotal").textContent) || 0,
+      items,
+    };
+  }
+
+  async function getNextQuoteNumber(){
+    const counterRef = doc(db, ...QUOTATION_COUNTER_DOC_PATH);
+    return runTransaction(db, async tx=>{
+      const snap = await tx.get(counterRef);
+      const current = snap.exists() ? (snap.data().lastNumber || 1000) : 1000;
+      const next = current + 1;
+      tx.set(counterRef, {lastNumber: next}, {merge:true});
+      return next;
+    });
+  }
+
+  const saveBtn = document.getElementById("saveQuoteBtn");
+  const saveStatus = document.getElementById("saveStatus");
+
+  saveBtn.addEventListener("click", async ()=>{
+    saveBtn.style.pointerEvents = "none";
+    saveStatus.textContent = "⏳ جارٍ الحفظ...";
+    try{
+      const data = collectCurrentData();
+
+      if(!savedQuoteNumber){
+        savedQuoteNumber = await getNextQuoteNumber();
+        savedDocId = "Q-" + savedQuoteNumber;
+        document.getElementById("quoteNumber").textContent = savedDocId;
+      }
+
+      await setDoc(doc(db, QUOTATIONS_COLLECTION, savedDocId), {
+        ...data,
+        quoteNumber: savedDocId,
+        updatedAt: serverTimestamp(),
+      }, {merge:true});
+
+      saveBtn.textContent = "💾 تحديث الحفظ (رقم العرض: " + savedDocId + ")";
+      saveBtn.classList.add("is-saved");
+      saveStatus.textContent = "✓ تم الحفظ بنجاح — رقم عرض السعر: " + savedDocId;
+    }catch(err){
+      console.error("تعذر حفظ عرض السعر:", err);
+      saveStatus.textContent = "⚠ تعذر الحفظ: " + err.message;
+    }finally{
+      saveBtn.style.pointerEvents = "";
+    }
+  });
 
   loadFromCalculator();
   recalcAll();
