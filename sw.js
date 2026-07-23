@@ -1,12 +1,13 @@
 // =========================================================================
 // sw.js — Service Worker: يجعل التطبيق قابلاً للتثبيت (PWA) ويتيح فتحه
-// حتى بدون اتصال بالإنترنت (باستخدام آخر نسخة محفوظة من الصفحات والتنسيقات).
+// حتى بدون اتصال بالإنترنت. يستخدم استراتيجية "الشبكة أولاً" حتى تظهر أي
+// تحديثات جديدة تُرفع للموقع فورًا، مع الاحتفاظ بنسخة احتياطية للعمل
+// بدون إنترنت إن انقطعت الشبكة.
 // =========================================================================
 // ملاحظة: طلبات Firebase (قراءة/كتابة الأسعار وعروض الأسعار) لا يتم
-// التعامل معها هنا إطلاقًا — تمر مباشرة للشبكة كالمعتاد، فتبقى الأسعار
-// والحفظ يعملان بشكل حي طبيعي طالما هناك اتصال بالإنترنت.
+// التعامل معها هنا إطلاقًا — تمر مباشرة للشبكة كالمعتاد.
 
-const CACHE_NAME = "stac-floor-calc-v1";
+const CACHE_NAME = "stac-floor-calc-v2"; // غيّر هذا الرقم عند أي تحديث مستقبلي لإجبار تحديث الكاش
 
 const APP_SHELL = [
   "./index.html",
@@ -45,19 +46,18 @@ self.addEventListener("fetch", event=>{
   const url = new URL(req.url);
   if(url.origin !== self.location.origin) return;
 
+  // network-first: always try to get the freshest file when online,
+  // so updates you deploy show up immediately without a stale cached copy.
+  // falls back to the cached version only when the network request fails (offline).
   event.respondWith(
-    caches.match(req).then(cached=>{
-      const network = fetch(req)
-        .then(res=>{
-          if(res && res.ok){
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(cache=> cache.put(req, clone));
-          }
-          return res;
-        })
-        .catch(()=> cached);
-      // cache-first for instant loads, but refresh the cache in the background
-      return cached || network;
-    })
+    fetch(req)
+      .then(res=>{
+        if(res && res.ok){
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(cache=> cache.put(req, clone));
+        }
+        return res;
+      })
+      .catch(()=> caches.match(req))
   );
 });
