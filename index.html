@@ -420,22 +420,29 @@ document.getElementById("outdoorToggle").addEventListener("click", ()=>{
   document.getElementById("outdoorSection").classList.toggle("collapsed");
 });
 
-(async function loadLiveData(){
+// render immediately using the bundled default data — works fully offline,
+// so the user can always see and select systems even with no connection.
+renderSystems();
+recalcAll();
+
+// then try to fetch live pricing in the background; if it arrives, refresh
+// the numbers in place (selections/expanded state are left untouched).
+(async function syncLiveData(){
   const statusEl = document.getElementById("liveStatus");
+  if(statusEl) statusEl.textContent = "جارٍ التحقق من وجود تحديثات للأسعار...";
   try{
     const snap = await getDoc(doc(db, ...PRODUCTS_DOC_PATH));
     if(snap.exists()){
       applyProductsData(snap.data());
+      recalcAll();
       if(statusEl) statusEl.textContent = "الأسعار محدّثة من قاعدة البيانات";
     } else if(statusEl){
       statusEl.textContent = "لا توجد بيانات محفوظة بعد — يتم عرض القيم الافتراضية";
     }
   }catch(err){
     console.error("تعذر تحميل بيانات الأسعار الحيّة:", err);
-    if(statusEl) statusEl.textContent = "تعذر الاتصال بقاعدة البيانات — يتم عرض القيم الافتراضية";
+    if(statusEl) statusEl.textContent = "⚠ أنت غير متصل بالإنترنت — يتم عرض القيم الافتراضية المحفوظة على الجهاز";
   }
-  renderSystems();
-  recalcAll();
 })();
 
 // ---------------------------------------------------------------------
