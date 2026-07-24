@@ -53,7 +53,7 @@
   .collapsed .toggle-arrow{transform:rotate(180deg);}
   .collapsed .collapsible-content{display:none;}
 
-  .info-grid{display:grid; grid-template-columns:1fr; gap:12px;}
+  .info-grid{display:grid; grid-template-columns:1fr; gap:10px 20px;}
   @media(min-width:700px){.info-grid{grid-template-columns:1fr 1fr;}}
   @media(min-width:1000px){.info-grid{grid-template-columns:1fr 1fr 1fr;}}
   .field{display:flex; flex-direction:column; gap:4px;}
@@ -63,6 +63,10 @@
     font-family:'Cairo',sans-serif; font-size:13.5px; background:#fff; color:var(--ink);
   }
   .field input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(2,152,205,.12);}
+  /* project-info panel on index.html: label and input inline on the same row */
+  .info-grid .field{flex-direction:row; align-items:center; gap:10px;}
+  .info-grid .field label{flex:0 0 128px; white-space:nowrap;}
+  .info-grid .field input{flex:1; min-width:0;}
   .section-wrap{margin-top:22px;}
   .section-title{
     font-size:15px; font-weight:800; color:#fff; margin:0;
