@@ -48,10 +48,14 @@
   }
   .quote-info-grid label .req{color:#c0392b;}
   .quote-info-grid input[type=text], .quote-info-grid input[type=tel]{
-    flex:1; min-width:0; border:1px solid var(--line); border-radius:6px; padding:6px 9px;
-    font-size:13px; font-family:inherit; transition:border-color .15s ease, background .15s ease;
+    flex:1; min-width:0; border:none; border-bottom:1px solid transparent; padding:4px 2px;
+    font-size:13px; font-family:inherit; font-weight:700; color:var(--brand-dark);
+    background:transparent; transition:border-color .15s ease, background .15s ease;
   }
-  .quote-info-grid input.invalid{border-color:#c0392b; background:#fdecea;}
+  .quote-info-grid input[type=text]:focus, .quote-info-grid input[type=tel]:focus{
+    outline:none; background:#fff; border-bottom-color:var(--brand);
+  }
+  .quote-info-grid input.invalid{background:#fdecea; border-bottom-color:#c0392b;}
   .quote-info-grid .static-value{
     flex:1; font-size:13px; font-weight:700; color:var(--brand-dark);
   }
@@ -118,6 +122,8 @@
     .sheet{box-shadow:none; border-radius:0; padding:14px 6px; max-width:100%;}
     a.add, a.cut, .settings{display:none !important;}
     .logo-wrap input[type=file]{display:none;}
+    tr.detail-row{display:table-row !important;}
+    .toggle-icon{display:none !important;}
   }
 </style>
 </head>
@@ -165,15 +171,19 @@
         <label for="phoneNumber">رقم التليفون <span class="req">*</span></label>
         <input type="tel" id="phoneNumber" placeholder="01xxxxxxxxx">
       </div>
+      <div class="field">
+        <label for="paintArea">المساحة المطلوب دهانها (م²)</label>
+        <input type="text" id="paintArea" placeholder="0">
+      </div>
     </div>
 
     <table class="inventory">
       <thead>
         <tr>
-          <th width="34%"><span contenteditable="true">البند</span></th>
-          <th width="22%"><span contenteditable="true">السعر</span></th>
-          <th width="22%"><span contenteditable="true">الكمية (كجم)</span></th>
-          <th width="22%"><span contenteditable="true">الإجمالي</span></th>
+          <th width="46%"><span contenteditable="true">البند</span></th>
+          <th width="15%"><span contenteditable="true">السعر</span></th>
+          <th width="15%"><span contenteditable="true">الكمية (كجم)</span></th>
+          <th width="24%"><span contenteditable="true">الإجمالي</span></th>
         </tr>
       </thead>
       <tbody id="invBody">
@@ -373,6 +383,7 @@ import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstati
     if(data.projectAddress) document.getElementById("projectAddress").value = data.projectAddress;
     if(data.responsiblePerson) document.getElementById("responsiblePerson").value = data.responsiblePerson;
     if(data.phoneNumber) document.getElementById("phoneNumber").value = data.phoneNumber;
+    if(data.area) document.getElementById("paintArea").value = data.area;
     if(data.quoteDate) document.getElementById("quoteDate").textContent = data.quoteDate;
 
     invBody.innerHTML = ""; // clear the sample row
@@ -425,6 +436,7 @@ import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstati
       projectAddress: document.getElementById("projectAddress").value || "",
       responsiblePerson: document.getElementById("responsiblePerson").value || "",
       phoneNumber: document.getElementById("phoneNumber").value || "",
+      paintArea: document.getElementById("paintArea").value || "",
       quoteDate: document.getElementById("quoteDate").textContent.trim(),
       currency: currentPrefix(),
       subtotal: parseFloat(document.getElementById("subtotal").textContent) || 0,
