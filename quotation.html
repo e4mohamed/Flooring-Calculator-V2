@@ -151,6 +151,7 @@
     tr.detail-row{display:table-row !important;}
     .toggle-icon{display:none !important;}
     #saveStatus{display:none !important;}
+    #resetToNewCopyBtn{display:none !important;}
 
     .doc-header, aside{page-break-inside:avoid;}
     tr, .field{page-break-inside:avoid;}
@@ -206,6 +207,7 @@
       <div class="field">
         <label for="quoteNumber">رقم عرض السعر</label>
         <span class="static-value" id="quoteNumber"></span>
+        <button type="button" id="resetToNewCopyBtn" style="display:none; background:none; border:none; color:var(--brand); font-size:11px; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; margin-inline-start:6px;">🆕 حفظ كنسخة جديدة</button>
       </div>
       <div class="field">
         <label for="projectAddress">العنوان <span class="req">*</span></label>
@@ -229,20 +231,7 @@
       </div>
     </div>
 
-    <div class="client-info-grid">
-      <div class="field">
-        <label for="clientName">الاسم</label>
-        <input type="text" id="clientName" placeholder="اسم العميل">
-      </div>
-      <div class="field">
-        <label for="clientMobile">رقم الموبايل</label>
-        <input type="tel" id="clientMobile" placeholder="01xxxxxxxxx">
-      </div>
-      <div class="field">
-        <label for="clientEmail">البريد الإلكتروني</label>
-        <input type="email" id="clientEmail" placeholder="name@example.com">
-      </div>
-    </div>
+    
 
     <table class="inventory">
       <thead>
@@ -288,7 +277,7 @@
         <li>10% عند الانتهاء من اعمال الطبقة الاخيرة من الايبوكسي</li>
       </ol>
     </div>
-  </br>
+    </br>
     <div class="client-info-grid">
       <div class="field">
         
@@ -303,6 +292,7 @@
         <input type="email" id="clientEmail" placeholder="sales@staceg.com">
       </div>
     </div>
+
     <div class="settings">
       <div class="ritset">العملة: <span id="currency" contenteditable="true">ج.م</span></div>
       <div class="lftset">
@@ -457,7 +447,8 @@ import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstati
   });
 
   // ---------------------------------------------------------------------
-  // Auto-fill from the systems calculator (index.html), passed via sessionStorage
+  // Auto-fill from the systems calculator (index.html) OR from the admin
+  // "saved quotations" page (admin-quotations.html), passed via sessionStorage
   // ---------------------------------------------------------------------
   function loadFromCalculator(){
     let raw;
@@ -475,7 +466,14 @@ import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstati
     if(data.responsiblePerson) document.getElementById("responsiblePerson").value = data.responsiblePerson;
     if(data.phoneNumber) document.getElementById("phoneNumber").value = data.phoneNumber;
     if(data.area) document.getElementById("paintArea").value = data.area;
+    if(data.clientName) document.getElementById("clientName").value = data.clientName;
+    if(data.clientMobile) document.getElementById("clientMobile").value = data.clientMobile;
+    if(data.clientEmail) document.getElementById("clientEmail").value = data.clientEmail;
     if(data.quoteDate) document.getElementById("quoteDate").textContent = data.quoteDate;
+    if(data.currency){
+      document.getElementById("currency").textContent = data.currency;
+      document.querySelectorAll(".curval").forEach(el=> el.textContent = data.currency);
+    }
 
     invBody.innerHTML = ""; // clear the sample row
     let currentGroupId = null;
@@ -492,6 +490,23 @@ import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstati
         }
       }
     });
+
+    // loaded from the admin page for an EXISTING saved quote: bind saving
+    // back to that same document, so "Save" updates it instead of issuing
+    // a brand-new quote number. A small link lets the user detach this
+    // binding and save the loaded data as a fresh copy instead.
+    const existingDocId = data.docId || data.quoteNumber;
+    if(existingDocId){
+      savedDocId = existingDocId;
+      savedQuoteNumber = data.quoteNumber || existingDocId;
+      document.getElementById("quoteNumber").textContent = savedDocId;
+      markSavedState(savedDocId);
+      document.getElementById("resetToNewCopyBtn").style.display = "inline";
+    }
+
+    if(data.autoPrint){
+      setTimeout(()=> window.print(), 400);
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -551,7 +566,27 @@ import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstati
 
   const saveBtn = document.getElementById("saveQuoteBtn");
   const saveStatus = document.getElementById("saveStatus");
+  const resetToNewCopyBtn = document.getElementById("resetToNewCopyBtn");
   const REQUIRED_FIELDS = ["projectName", "projectAddress", "responsiblePerson", "phoneNumber"];
+
+  // reflects "this quote is already saved under docId" in the UI —
+  // used both right after a successful save and when a saved quote is
+  // loaded from the admin page for editing
+  function markSavedState(docId){
+    document.getElementById("quoteNumber").textContent = docId;
+    saveBtn.textContent = "💾 تحديث الحفظ (رقم العرض: " + docId + ")";
+    saveBtn.classList.add("is-saved");
+  }
+
+  resetToNewCopyBtn.addEventListener("click", ()=>{
+    savedDocId = null;
+    savedQuoteNumber = null;
+    document.getElementById("quoteNumber").textContent = "";
+    saveBtn.textContent = "💾 حفظ عرض السعر في قاعدة البيانات";
+    saveBtn.classList.remove("is-saved");
+    saveStatus.textContent = "";
+    resetToNewCopyBtn.style.display = "none";
+  });
 
   function validateHeader(){
     let firstInvalid = null;
@@ -592,7 +627,6 @@ import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstati
       if(!savedQuoteNumber){
         savedQuoteNumber = await getNextQuoteNumber();
         savedDocId = "Q-" + savedQuoteNumber;
-        document.getElementById("quoteNumber").textContent = savedDocId;
       }
 
       await setDoc(doc(db, QUOTATIONS_COLLECTION, savedDocId), {
@@ -601,8 +635,8 @@ import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstati
         updatedAt: serverTimestamp(),
       }, {merge:true});
 
-      saveBtn.textContent = "💾 تحديث الحفظ (رقم العرض: " + savedDocId + ")";
-      saveBtn.classList.add("is-saved");
+      markSavedState(savedDocId);
+      resetToNewCopyBtn.style.display = "inline";
       saveStatus.textContent = "✓ تم الحفظ بنجاح — رقم عرض السعر: " + savedDocId;
     }catch(err){
       console.error("تعذر حفظ عرض السعر:", err);
