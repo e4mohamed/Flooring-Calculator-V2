@@ -251,7 +251,7 @@ function renderSystemGroup(list, container){
           <td>${step.desc}</td>
           <td><input type="number" step="0.01" class="coverage-input" value="${step.coverage}"></td>
           <td class="qty-cell"></td>
-          <td class="price-cell"></td>
+          <td class="price-cell"><input type="number" step="0.01" min="0" class="coverage-input price-input" title="اضغط لتعديل السعر الافتراضي"></td>
           <td class="cost-cell"></td>
         </tr>`;
     });
@@ -274,6 +274,7 @@ function renderSystemGroup(list, container){
         sys.steps[i].key = newKey;
         const item = getSelectableItems().find(it=>it.key===newKey);
         const row = sel.closest("tr");
+        sys.steps[i].priceOverride = null; // switching items resets any custom price back to the default
         if(item){
           sys.steps[i].coverage = item.coverage;
           row.querySelector(".coverage-input").value = item.coverage;
@@ -287,6 +288,17 @@ function renderSystemGroup(list, container){
     body.querySelectorAll(".coverage-input").forEach((inp, i)=>{
       inp.addEventListener("input", e=>{
         sys.steps[i].coverage = parseFloat(e.target.value)||0;
+        recalcSystem(sys);
+      });
+    });
+    body.querySelectorAll(".price-input").forEach((inp, i)=>{
+      inp.addEventListener("input", e=>{
+        const val = e.target.value;
+        sys.steps[i].priceOverride = val === "" ? null : (parseFloat(val)||0);
+        recalcSystem(sys);
+      });
+      // on leaving the field, snap the displayed value to a clean 2-decimal format
+      inp.addEventListener("blur", e=>{
         recalcSystem(sys);
       });
     });
@@ -315,12 +327,17 @@ function recalcSystem(sys){
   rows.forEach((row, i)=>{
     const step = sys.steps[i];
     const coverage = step.coverage;
-    const price = getPrice(step.key);
+    const defaultPrice = getPrice(step.key);
+    const price = (step.priceOverride != null && !isNaN(step.priceOverride)) ? step.priceOverride : defaultPrice;
     const qty = coverage ? area/coverage : 0;
     const cost = qty*price;
     totalQty += qty; totalCost += cost;
     row.querySelector(".qty-cell").textContent = fmt(qty);
-    row.querySelector(".price-cell").textContent = fmt(price);
+    const priceInput = row.querySelector(".price-input");
+    // don't overwrite the field while the user is actively editing it
+    if(priceInput && document.activeElement !== priceInput){
+      priceInput.value = price.toFixed(2);
+    }
     row.querySelector(".cost-cell").textContent = fmt(cost);
     step._price = price;
     step._qty = qty;
