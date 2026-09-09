@@ -19,6 +19,16 @@
     padding:6px 14px; border-radius:20px;
   }
   .nav-link:hover{background:#eaf7fb;}
+  .admin-nav{display:flex; gap:8px; margin-inline-start:auto; flex-wrap:wrap;}
+  .admin-nav .nav-link{margin-inline-start:0;}
+  .admin-nav .nav-link.current{background:var(--brand); color:#fff;}
+  .role-badge{
+    display:inline-block; font-size:11px; font-weight:700; border-radius:20px;
+    padding:2px 10px; margin-inline-start:8px;
+  }
+  .role-badge.role-edit{background:#e6f4ea; color:#1e7e34;}
+  .role-badge.role-view{background:#eef3f7; color:var(--brand-dark);}
+  body.role-view .needs-edit{display:none !important;}
   .btn{
     font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer;
     border:none; border-radius:8px; padding:9px 18px; color:#fff; background:var(--brand);
@@ -86,7 +96,12 @@
     <h1>عروض الأسعار المحفوظة</h1>
     <p>صفحة الأدمن لعرض ومتابعة كل عروض الأسعار المحفوظة في قاعدة البيانات</p>
   </div>
-  <a class="nav-link" href="index.html">↩ الذهاب إلى حاسبة العرض</a>
+  <div class="admin-nav">
+    <a class="nav-link current" href="admin-quotations.html">عروض الأسعار</a>
+    <a class="nav-link" href="products.html">المنتجات والأسعار</a>
+    <a class="nav-link" href="users.html">المستخدمون والصلاحيات</a>
+    <a class="nav-link" href="index.html">↩ حاسبة العرض</a>
+  </div>
 </header>
 
 <div class="wrap">
@@ -108,6 +123,7 @@
   <div id="adminArea">
     <p class="status-banner" id="adminStatus">
       مسجّل دخول كـ <span id="adminEmail"></span>
+      <span class="role-badge" id="roleBadge"></span>
       <button class="signout-link" id="signoutBtn">تسجيل خروج</button>
     </p>
 
@@ -130,6 +146,9 @@
 import { db, auth } from "./firebase-config.js";
 import { collection, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { ROLE_EDIT, roleLabel, canEdit, ensureUserProfile, applyRoleBodyClass } from "./roles.js";
+
+let currentUserRole = null;
 
 let allQuotes = [];
 
@@ -217,9 +236,9 @@ function renderQuotesList(quotes){
           <tbody>${itemsHtml || "<tr><td colspan=4>لا توجد بنود</td></tr>"}</tbody>
         </table>
         <div class="quote-row-actions">
-          <button class="btn secondary load-quote-btn" data-id="${q.id}">✏️ تحميل للتعديل / النسخ</button>
+          <button class="btn secondary needs-edit load-quote-btn" data-id="${q.id}">✏️ تحميل للتعديل / النسخ</button>
           <button class="btn secondary print-quote-btn" data-id="${q.id}">🖨 طباعة</button>
-          <button class="delete-quote-btn" data-id="${q.id}">🗑 حذف هذا العرض نهائيًا</button>
+          <button class="delete-quote-btn needs-edit" data-id="${q.id}">🗑 حذف هذا العرض نهائيًا</button>
         </div>
       </div>`;
 
@@ -229,6 +248,10 @@ function renderQuotesList(quotes){
 
     row.querySelector(".load-quote-btn").addEventListener("click", e=>{
       e.stopPropagation();
+      if(!canEdit(currentUserRole)){
+        alert("صلاحيتك عرض فقط — لا يمكنك تحميل هذا العرض للتعديل أو النسخ.");
+        return;
+      }
       sessionStorage.setItem("stacQuotationData", JSON.stringify(buildQuotationPayload(q)));
       window.open("quotation.html", "_blank");
     });
@@ -243,6 +266,10 @@ function renderQuotesList(quotes){
 
     row.querySelector(".delete-quote-btn").addEventListener("click", async e=>{
       e.stopPropagation();
+      if(!canEdit(currentUserRole)){
+        alert("صلاحيتك عرض فقط — لا يمكنك حذف عروض الأسعار.");
+        return;
+      }
       if(!confirm(`حذف عرض السعر ${q.quoteNumber || q.id} نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
       try{
         await deleteDoc(doc(db, "quotations", q.id));
@@ -302,6 +329,14 @@ onAuthStateChanged(auth, async user=>{
     loginPanel.style.display = "none";
     adminArea.style.display = "block";
     document.getElementById("adminEmail").textContent = user.email;
+
+    currentUserRole = await ensureUserProfile(db, user);
+    applyRoleBodyClass(currentUserRole);
+    const roleBadge = document.getElementById("roleBadge");
+    roleBadge.textContent = roleLabel(currentUserRole);
+    roleBadge.classList.remove("role-view", "role-edit");
+    roleBadge.classList.add(currentUserRole === ROLE_EDIT ? "role-edit" : "role-view");
+
     await loadQuotes();
   } else {
     loginPanel.style.display = "block";
