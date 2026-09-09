@@ -459,7 +459,7 @@ recalcAll();
       statusEl.textContent = "لا توجد بيانات محفوظة بعد — يتم عرض القيم الافتراضية";
     }
   }catch(err){
-    console.error("تعذر تحميل بيانات الأسعار الحيّة:", err);
+    console.error("تعذر تحميل بيانات الأسعار المحدثة:", err);
     if(statusEl) statusEl.textContent = "⚠ أنت غير متصل بالإنترنت — يتم عرض القيم الافتراضية المحفوظة على الجهاز";
   }
 })();
