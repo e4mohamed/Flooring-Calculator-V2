@@ -68,7 +68,8 @@
   .quote-detail-table th{background:transparent; border-bottom:1px solid var(--line); color:var(--ink-soft); font-weight:700; padding:6px 4px;}
   .quote-detail-table td{padding:6px 4px; border-bottom:1px solid var(--line);}
   .quote-detail-table tr.group-line td{background:var(--brand-bg,#eaf5f8); font-weight:800; color:var(--brand-dark);}
-  .quote-row-actions{display:flex; gap:8px; margin-top:10px;}
+  .quote-row-actions{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .quote-row-actions .btn{padding:6px 14px; font-size:12px; border-radius:7px;}
   .delete-quote-btn{
     background:#fde8e6; color:#b3261e; border:1px solid #f3b9b2; border-radius:7px;
     padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer;
@@ -145,6 +146,30 @@ function formatTimestamp(ts){
   }
 }
 
+// Builds the payload quotation.html reads from sessionStorage ("stacQuotationData")
+// to prefill itself — used both by the "load to edit/copy" and "print" buttons.
+function buildQuotationPayload(q){
+  return {
+    docId: q.id,
+    quoteNumber: q.quoteNumber || q.id,
+    projectName: q.projectName || "",
+    projectAddress: q.projectAddress || "",
+    responsiblePerson: q.responsiblePerson || "",
+    phoneNumber: q.phoneNumber || "",
+    area: q.paintArea || "",
+    clientName: q.clientName || "",
+    clientMobile: q.clientMobile || "",
+    clientEmail: q.clientEmail || "",
+    quoteDate: q.quoteDate || "",
+    currency: q.currency || "",
+    items: (q.items || []).map(item=>
+      item.group
+        ? { group: true, title: item.title }
+        : { group: false, title: item.title, price: item.price || 0, qty: item.qty || 0 }
+    ),
+  };
+}
+
 function renderQuotesList(quotes){
   const listEl = document.getElementById("quotesList");
   const emptyEl = document.getElementById("emptyState");
@@ -192,12 +217,28 @@ function renderQuotesList(quotes){
           <tbody>${itemsHtml || "<tr><td colspan=4>لا توجد بنود</td></tr>"}</tbody>
         </table>
         <div class="quote-row-actions">
+          <button class="btn secondary load-quote-btn" data-id="${q.id}">✏️ تحميل للتعديل / النسخ</button>
+          <button class="btn secondary print-quote-btn" data-id="${q.id}">🖨 طباعة</button>
           <button class="delete-quote-btn" data-id="${q.id}">🗑 حذف هذا العرض نهائيًا</button>
         </div>
       </div>`;
 
     row.querySelector(".quote-row-head").addEventListener("click", ()=>{
       row.classList.toggle("expanded");
+    });
+
+    row.querySelector(".load-quote-btn").addEventListener("click", e=>{
+      e.stopPropagation();
+      sessionStorage.setItem("stacQuotationData", JSON.stringify(buildQuotationPayload(q)));
+      window.open("quotation.html", "_blank");
+    });
+
+    row.querySelector(".print-quote-btn").addEventListener("click", e=>{
+      e.stopPropagation();
+      const payload = buildQuotationPayload(q);
+      payload.autoPrint = true;
+      sessionStorage.setItem("stacQuotationData", JSON.stringify(payload));
+      window.open("quotation.html", "_blank");
     });
 
     row.querySelector(".delete-quote-btn").addEventListener("click", async e=>{
