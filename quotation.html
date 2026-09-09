@@ -516,7 +516,7 @@ import { doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstati
 
       saveBtn.textContent = "💾 تحديث الحفظ (رقم العرض: " + savedDocId + ")";
       saveBtn.classList.add("is-saved");
-      saveStatus.textContent = "✓ تم الحفظ بنجاح — رقم عرض السعر: " + savedDocId;
+      
     }catch(err){
       console.error("تعذر حفظ عرض السعر:", err);
       if(!navigator.onLine){
