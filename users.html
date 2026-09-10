@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>المستخدمون والصلاحيات | STAC</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0298cd">
+<link rel="icon" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .nav-link{
+    display:inline-block; margin-inline-start:auto; font-size:12px; font-weight:700;
+    color:var(--brand-dark); text-decoration:none; border:1.5px solid var(--brand);
+    padding:6px 14px; border-radius:20px;
+  }
+  .nav-link:hover{background:#eaf7fb;}
+  .admin-nav{display:flex; gap:8px; margin-inline-start:auto; flex-wrap:wrap;}
+  .admin-nav .nav-link{margin-inline-start:0;}
+  .admin-nav .nav-link.current{background:var(--brand); color:#fff;}
+  .role-badge{
+    display:inline-block; font-size:11px; font-weight:700; border-radius:20px;
+    padding:2px 10px; margin-inline-start:8px;
+  }
+  .role-badge.role-edit{background:#e6f4ea; color:#1e7e34;}
+  .role-badge.role-view{background:#eef3f7; color:var(--brand-dark);}
+  body.role-view .needs-edit{display:none !important;}
+  .btn{
+    font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer;
+    border:none; border-radius:8px; padding:9px 18px; color:#fff; background:var(--brand);
+  }
+  .btn:hover{background:var(--brand-dark);}
+  .btn.secondary{background:#fff; color:var(--brand-dark); border:1.5px solid var(--brand);}
+  .btn.secondary:hover{background:#eaf7fb;}
+  .login-panel{max-width:360px; margin:60px auto 0;}
+  .login-panel .field{margin-bottom:10px;}
+  .login-panel .field label{font-weight:700; font-size:12px; display:block; margin-bottom:4px;}
+  .login-panel input[type=email], .login-panel input[type=password]{
+    width:100%; padding:8px 10px; border:1.5px solid var(--line); border-radius:7px;
+    font-family:'Cairo',sans-serif; font-size:13px;
+  }
+  .login-error{color:#b3261e; font-size:12px; margin-top:8px; display:none;}
+  #adminArea{display:none;}
+  .status-banner{font-size:12px; color:var(--ink-soft); margin:10px 2px 0;}
+  .signout-link{
+    background:none; border:none; color:var(--brand-dark); font-size:11.5px; font-weight:700;
+    text-decoration:underline; cursor:pointer; padding:0; margin-inline-start:10px;
+  }
+  .empty-state{text-align:center; color:var(--ink-soft); padding:30px 10px; font-size:13px;}
+
+  .note-banner{
+    font-size:12px; color:var(--ink-soft); background:var(--brand-bg,#eef6fc);
+    border-radius:8px; padding:10px 12px; margin-bottom:14px; line-height:1.7;
+  }
+  table.users-table{width:100%; border-collapse:collapse; font-size:13px;}
+  table.users-table th{
+    background:var(--brand-bg,#eef6fc); color:var(--brand-dark); font-weight:700; padding:9px 8px;
+    border-bottom:2px solid var(--brand); text-align:right;
+  }
+  table.users-table td{padding:8px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  table.users-table tr.is-you td:first-child{font-weight:800;}
+  .you-tag{
+    display:inline-block; font-size:10.5px; font-weight:700; color:var(--brand-dark);
+    background:var(--brand-bg,#eef6fc); border-radius:10px; padding:1px 8px; margin-inline-start:6px;
+  }
+  select.role-select{
+    padding:5px 8px; border:1.5px solid var(--line); border-radius:6px;
+    font-family:'Cairo',sans-serif; font-size:12.5px;
+  }
+  .save-role-btn{
+    background:var(--brand); color:#fff; border:none; border-radius:6px;
+    padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-inline-start:6px;
+  }
+  .save-role-btn:hover{background:var(--brand-dark);}
+  .save-role-btn:disabled{opacity:.5; cursor:default;}
+  .role-static-label{
+    display:inline-block; font-size:12px; font-weight:700; border-radius:12px; padding:2px 10px;
+  }
+  .role-static-label.role-edit{background:#e6f4ea; color:#1e7e34;}
+  .role-static-label.role-view{background:#eef3f7; color:var(--brand-dark);}
+  .row-save-status{font-size:11px; color:var(--ink-soft); margin-inline-start:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAACACAIAAADS5vE8AAAD10lEQVR4nO3dT0iUeRzH8e80jn8ayVKLMbKcgrS1bMtaVKI/tCGBRYVCHcIOERERQX9YDx0qSqKOXXYPu5eMomDZEova3SIrihL6Y6MlJBO1458asT9aNuPsYaDDaJc+ME/C+3V5nofnd/g+8Ob3zMxlXOGBiAHfapzTA2BsS4kf/HWNzs6BMaezvsrYgSAiIEhSEq7j+xLwNQmfdtiBICEgSAgIEgKChIAgISBICAgSAoKEgCAhIEgICBICgoSAICEgSAgIEgKChIAgISBICAgSAoKEgCAhIEgICBICgoSAICEgSAgIEgKChIAgISBICAgSAoKEgCAhIEgICBICgoSAICEgSAgIEgKChIAgISBICAgSAoKEgCAhIEgICBICgoSAICEgSAgIksT/TE2m1v/6j11uj0SH3eNcx6vnP3rZ/8etTjO7HwwvmpFtZrUVBavn5p299+LAX623f1mZm5lmZmfuvTh1J+hNc3tTU46sn5eXleHgI8DJgPaff/h77U++rPRLraEjTW0nNy2sLPaZWcnBy2e2lX9Z9ndb95YK/7WnPTWl+Tc7ei88eHV+e0W6x339ac/ecw8btpY59wRw9BX25v2nT5Goma2a46stLxh1zeDn6OBQdOPi/H/bus3st+bn+yqL0j1uM1teOGV69vhINJbEkZHIyR1oX2VRza+3VxROWbdgWvnMnFHX3HjWu6xw8szJmS/7Bj9Hhzu63xVPzfpyt35DSbKGxeicDKi6NH/VD74rga5DF59UFvt2/zx75Jqrga5A6G3T41D3u493n7+Jxthvvi+OvcLCH4Zagn1ZGZ6a0vyGrWUNd4Mj10SHY52vPzTtWvrnjiUnqn/8p73Hn+sNhN7G78Zitufcg6QOjREcC8hltvN0S6h/0Mz6BoamThzly1RLsG9O3oT4+WJ/dnNH7+ayghNX2ociw2Z28dGr+Akc5NgrbJI39eiGkh0NLeket9vlOl49f+Saq4Guilm58fMMjzsnM7XIN6HMn7PmZHO2NzUnM+3w2rnJnRqJXOGBiJn56xrj1531VY7Og+9dQir8Eg0JAUFCQJAQECQEBAkBQUJAkBAQJAQECQFBQkCQEBAkBAQJAUFCQJAQECQEBAkBQUJAkBAQJAQECQFBQkCQEBAkBAQJAUFCQJAQECQEBAkBQUJAkBAQJAQECQFBQkCQEBAkBAQJAUFCQJAQECQEBAkBQUJAkBAQJAQECQFBQkCQEBAkBAQJAUFCQJAQECQEBAkBQUJAkBAQJAQESUrCtb+u0ZE5MEaxA0FCQJC4wgMRp2fAGMYOBMn/88DTFIhwMCoAAAAASUVORK5CYII=" alt="STAC">
+  <div>
+    <h1>المستخدمون والصلاحيات</h1>
+    <p>إدارة من يستطيع الوصول إلى صفحات الأدمن، وما هي صلاحيته</p>
+  </div>
+  <div class="admin-nav">
+    <a class="nav-link" href="admin-quotations.html">عروض الأسعار</a>
+    <a class="nav-link" href="products.html">المنتجات والأسعار</a>
+    <a class="nav-link current" href="users.html">المستخدمون والصلاحيات</a>
+    <a class="nav-link" href="index.html">↩ حاسبة العرض</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="panel login-panel" id="loginPanel">
+    <h2>تسجيل دخول الأدمن</h2>
+    <div class="field">
+      <label for="loginEmail">البريد الإلكتروني</label>
+      <input type="email" id="loginEmail" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="loginPassword">كلمة المرور</label>
+      <input type="password" id="loginPassword" autocomplete="current-password">
+    </div>
+    <button class="btn" id="loginBtn" style="width:100%;">دخول</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+
+  <div id="adminArea">
+    <p class="status-banner" id="adminStatus">
+      مسجّل دخول كـ <span id="adminEmail"></span>
+      <span class="role-badge" id="roleBadge"></span>
+      <button class="signout-link" id="signoutBtn">تسجيل خروج</button>
+    </p>
+
+    <div class="panel">
+      <h2>كل المستخدمين <span class="tag" id="userCountTag">0</span></h2>
+      <p class="note-banner needs-edit">
+        كل من يسجّل الدخول لأول مرة إلى أي صفحة أدمن (عروض الأسعار / المنتجات / المستخدمون)
+        يُضاف تلقائيًا هنا بصلاحية "عرض فقط". يمكنك من هنا ترقية أي مستخدم إلى "عرض وتعديل"،
+        أو إعادته إلى "عرض فقط".
+      </p>
+      <p class="note-banner" id="viewOnlyNote" style="display:none;">
+        صلاحيتك الحالية "عرض فقط" — يمكنك رؤية قائمة المستخدمين، لكن لا يمكنك تغيير صلاحيات أي مستخدم.
+      </p>
+      <div id="usersListWrap"></div>
+      <div class="empty-state" id="emptyState" style="display:none;">لا يوجد مستخدمون مسجّلون بعد</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>STAC for Chemical Industries — المستخدمون والصلاحيات (للاستخدام الداخلي فقط)</footer>
+
+<script type="module">
+import { db, auth } from "./firebase-config.js";
+import { collection, getDocs, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { ROLE_VIEW, ROLE_EDIT, roleLabel, canEdit, ensureUserProfile, applyRoleBodyClass } from "./roles.js";
+
+let currentUser = null;
+let currentUserRole = null;
+let allUsers = [];
+
+function formatTimestamp(ts){
+  if(!ts || !ts.toDate) return "—";
+  try{
+    return ts.toDate().toLocaleString("ar-EG", {dateStyle:"medium", timeStyle:"short"});
+  }catch(err){
+    return "—";
+  }
+}
+
+function renderUsersList(){
+  const wrap = document.getElementById("usersListWrap");
+  const emptyEl = document.getElementById("emptyState");
+  document.getElementById("userCountTag").textContent = allUsers.length;
+
+  if(allUsers.length === 0){
+    wrap.innerHTML = "";
+    emptyEl.style.display = "block";
+    return;
+  }
+  emptyEl.style.display = "none";
+
+  const canManage = canEdit(currentUserRole);
+
+  const rowsHtml = allUsers.map(u=>{
+    const isYou = u.id === currentUser?.uid;
+    const youTag = isYou ? `<span class="you-tag">أنت</span>` : "";
+    const roleCell = canManage
+      ? `
+        <select class="role-select" data-id="${u.id}">
+          <option value="${ROLE_VIEW}" ${u.role===ROLE_VIEW?"selected":""}>عرض فقط</option>
+          <option value="${ROLE_EDIT}" ${u.role===ROLE_EDIT?"selected":""}>عرض وتعديل</option>
+        </select>
+        <button class="save-role-btn" data-id="${u.id}" disabled>حفظ</button>
+        <span class="row-save-status" data-status-for="${u.id}"></span>
+      `
+      : `<span class="role-static-label ${u.role===ROLE_EDIT?"role-edit":"role-view"}">${roleLabel(u.role)}</span>`;
+
+    return `
+      <tr class="${isYou?"is-you":""}" data-row-id="${u.id}">
+        <td>${u.email || "—"}${youTag}</td>
+        <td>${roleCell}</td>
+        <td>${formatTimestamp(u.createdAt)}</td>
+      </tr>`;
+  }).join("");
+
+  wrap.innerHTML = `
+    <table class="users-table">
+      <thead><tr><th>البريد الإلكتروني</th><th>الصلاحية</th><th>أول تسجيل دخول</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+
+  if(!canManage) return;
+
+  wrap.querySelectorAll(".role-select").forEach(sel=>{
+    sel.addEventListener("change", ()=>{
+      const btn = wrap.querySelector(`.save-role-btn[data-id="${sel.dataset.id}"]`);
+      btn.disabled = false;
+    });
+  });
+
+  wrap.querySelectorAll(".save-role-btn").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const uid = btn.dataset.id;
+      const sel = wrap.querySelector(`.role-select[data-id="${uid}"]`);
+      const statusEl = wrap.querySelector(`[data-status-for="${uid}"]`);
+      const newRole = sel.value;
+      const targetUser = allUsers.find(u=> u.id === uid);
+      const isSelf = uid === currentUser?.uid;
+
+      const confirmMsg = isSelf
+        ? `أنت توشك على تغيير صلاحيتك الخاصة إلى "${roleLabel(newRole)}". تأكيد؟`
+        : `تغيير صلاحية ${targetUser?.email || uid} إلى "${roleLabel(newRole)}"؟`;
+      if(!confirm(confirmMsg)) return;
+
+      btn.disabled = true;
+      statusEl.textContent = "⏳ جارٍ الحفظ...";
+      try{
+        await updateDoc(doc(db, "users", uid), {
+          role: newRole,
+          updatedAt: serverTimestamp(),
+        });
+        if(targetUser) targetUser.role = newRole;
+        statusEl.textContent = "✓ تم الحفظ";
+        if(isSelf){
+          currentUserRole = newRole;
+          applyRoleBodyClass(currentUserRole);
+          updateRoleBadge();
+          renderUsersList();
+        }
+      }catch(err){
+        statusEl.textContent = "⚠ تعذر الحفظ: " + err.message;
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+async function loadUsers(){
+  const wrap = document.getElementById("usersListWrap");
+  wrap.innerHTML = `<div class="empty-state">⏳ جارٍ تحميل المستخدمين...</div>`;
+  try{
+    const snap = await getDocs(collection(db, "users"));
+    allUsers = [];
+    snap.forEach(docSnap=> allUsers.push({ id: docSnap.id, ...docSnap.data() }));
+    allUsers.sort((a,b)=> (a.email||"").localeCompare(b.email||""));
+    renderUsersList();
+  }catch(err){
+    wrap.innerHTML = `<div class="empty-state">⚠ تعذر تحميل المستخدمين: ${err.message}</div>`;
+  }
+}
+
+function updateRoleBadge(){
+  const roleBadge = document.getElementById("roleBadge");
+  roleBadge.textContent = roleLabel(currentUserRole);
+  roleBadge.classList.remove("role-view", "role-edit");
+  roleBadge.classList.add(currentUserRole === ROLE_EDIT ? "role-edit" : "role-view");
+  document.getElementById("viewOnlyNote").style.display = canEdit(currentUserRole) ? "none" : "block";
+}
+
+// ---------------------------------------------------------------------
+// Auth gate
+// ---------------------------------------------------------------------
+const loginPanel = document.getElementById("loginPanel");
+const adminArea = document.getElementById("adminArea");
+const loginError = document.getElementById("loginError");
+
+onAuthStateChanged(auth, async user=>{
+  if(user){
+    currentUser = user;
+    loginPanel.style.display = "none";
+    adminArea.style.display = "block";
+    document.getElementById("adminEmail").textContent = user.email;
+
+    currentUserRole = await ensureUserProfile(db, user);
+    applyRoleBodyClass(currentUserRole);
+    updateRoleBadge();
+
+    await loadUsers();
+  } else {
+    currentUser = null;
+    loginPanel.style.display = "block";
+    adminArea.style.display = "none";
+  }
+});
+
+document.getElementById("loginBtn").addEventListener("click", async ()=>{
+  loginError.style.display = "none";
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  try{
+    await signInWithEmailAndPassword(auth, email, password);
+  }catch(err){
+    loginError.textContent = "فشل تسجيل الدخول: تأكد من البريد وكلمة المرور";
+    loginError.style.display = "block";
+  }
+});
+
+document.getElementById("signoutBtn").addEventListener("click", ()=>{
+  signOut(auth);
+});
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
