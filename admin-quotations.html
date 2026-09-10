@@ -28,7 +28,10 @@
   }
   .role-badge.role-edit{background:#e6f4ea; color:#1e7e34;}
   .role-badge.role-view{background:#eef3f7; color:var(--brand-dark);}
-  body.role-view .needs-edit{display:none !important;}
+  body:not(.can-edit) .needs-edit{display:none !important;}
+  #noAccessMsg{display:none;}
+  body.no-access #pageContent{display:none;}
+  body.no-access #noAccessMsg{display:block;}
   .btn{
     font-family:'Cairo',sans-serif; font-weight:700; font-size:13px; cursor:pointer;
     border:none; border-radius:8px; padding:9px 18px; color:#fff; background:var(--brand);
@@ -127,6 +130,11 @@
       <button class="signout-link" id="signoutBtn">تسجيل خروج</button>
     </p>
 
+    <div class="panel" id="noAccessMsg">
+      ليس لديك صلاحية لعرض هذه الصفحة. تواصل مع أحد المحرّرين لمنحك صلاحية "عرض" أو "عرض وتعديل".
+    </div>
+
+    <div id="pageContent">
     <div class="panel">
       <h2>كل عروض الأسعار <span class="tag" id="quoteCountTag">0</span></h2>
       <div class="quotes-toolbar">
@@ -136,6 +144,7 @@
       <div id="quotesList"></div>
       <div class="empty-state" id="emptyState" style="display:none;">لا توجد عروض أسعار محفوظة بعد</div>
     </div>
+    </div><!-- /#pageContent -->
   </div>
 
 </div>
@@ -146,9 +155,9 @@
 import { db, auth } from "./firebase-config.js";
 import { collection, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { ROLE_EDIT, roleLabel, canEdit, ensureUserProfile, applyRoleBodyClass } from "./roles.js";
+import { PAGE_QUOTATIONS, roleLabel, getMyPermission, applyPermissionBodyClass } from "./roles.js";
 
-let currentUserRole = null;
+let currentPerm = { read:false, edit:false, role:null };
 
 let allQuotes = [];
 
@@ -248,7 +257,7 @@ function renderQuotesList(quotes){
 
     row.querySelector(".load-quote-btn").addEventListener("click", e=>{
       e.stopPropagation();
-      if(!canEdit(currentUserRole)){
+      if(!currentPerm.edit){
         alert("صلاحيتك عرض فقط — لا يمكنك تحميل هذا العرض للتعديل أو النسخ.");
         return;
       }
@@ -266,7 +275,7 @@ function renderQuotesList(quotes){
 
     row.querySelector(".delete-quote-btn").addEventListener("click", async e=>{
       e.stopPropagation();
-      if(!canEdit(currentUserRole)){
+      if(!currentPerm.edit){
         alert("صلاحيتك عرض فقط — لا يمكنك حذف عروض الأسعار.");
         return;
       }
@@ -330,14 +339,16 @@ onAuthStateChanged(auth, async user=>{
     adminArea.style.display = "block";
     document.getElementById("adminEmail").textContent = user.email;
 
-    currentUserRole = await ensureUserProfile(db, user);
-    applyRoleBodyClass(currentUserRole);
+    currentPerm = await getMyPermission(db, user, PAGE_QUOTATIONS);
+    applyPermissionBodyClass(currentPerm);
     const roleBadge = document.getElementById("roleBadge");
-    roleBadge.textContent = roleLabel(currentUserRole);
+    roleBadge.textContent = roleLabel(currentPerm.role);
     roleBadge.classList.remove("role-view", "role-edit");
-    roleBadge.classList.add(currentUserRole === ROLE_EDIT ? "role-edit" : "role-view");
+    roleBadge.classList.add(currentPerm.edit ? "role-edit" : "role-view");
 
-    await loadQuotes();
+    if(currentPerm.read){
+      await loadQuotes();
+    }
   } else {
     loginPanel.style.display = "block";
     adminArea.style.display = "none";
