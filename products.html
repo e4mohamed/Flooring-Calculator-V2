@@ -40,8 +40,11 @@
   }
   .role-badge.role-edit{background:#e6f4ea; color:#1e7e34;}
   .role-badge.role-view{background:#eef3f7; color:var(--brand-dark);}
-  body.role-view .needs-edit{display:none !important;}
-  body.role-view input, body.role-view select{pointer-events:none; opacity:.65;}
+  body:not(.can-edit) .needs-edit{display:none !important;}
+  body.read-only input, body.read-only select{pointer-events:none; opacity:.65;}
+  #noAccessMsg{display:none;}
+  body.no-access #pageContent{display:none;}
+  body.no-access #noAccessMsg{display:block;}
   .prod-table input[type=text]{
     width:100%; padding:5px 6px; border:1px solid #cdd9de; border-radius:6px;
     font-family:'Cairo',sans-serif; font-size:12.5px; text-align:right; background:#fff;
@@ -123,6 +126,11 @@
     <button class="signout-link" id="signoutBtn">تسجيل خروج</button>
   </p>
 
+  <div class="panel" id="noAccessMsg">
+    ليس لديك صلاحية لعرض هذه الصفحة. تواصل مع أحد المحرّرين لمنحك صلاحية "عرض" أو "عرض وتعديل".
+  </div>
+
+  <div id="pageContent">
   <div class="panel">
     <h2>المنتجات الأساسية (Raw Products) <span class="tag">قابلة للتعديل بالكامل</span></h2>
     <table class="prod-table">
@@ -176,6 +184,7 @@
       <span class="save-flash" id="saveFlash">✓ تم الحفظ بنجاح</span>
     </div>
   </div>
+  </div><!-- /#pageContent -->
 
   </div><!-- /#adminArea -->
 </div>
@@ -187,9 +196,9 @@ import { db, auth, PRODUCTS_DOC_PATH } from "./firebase-config.js";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { rawProducts, auxMaterials, mixtures, applyProductsData, computeMixPrice, getName, DEFAULT_DATA } from "./defaults.js";
-import { ROLE_EDIT, roleLabel, canEdit, ensureUserProfile, applyRoleBodyClass } from "./roles.js";
+import { PAGE_PRODUCTS, roleLabel, getMyPermission, applyPermissionBodyClass } from "./roles.js";
 
-let currentUserRole = null;
+let currentPerm = { read:false, edit:false, role:null };
 
 const docRef = doc(db, ...PRODUCTS_DOC_PATH);
 
@@ -385,7 +394,7 @@ async function loadFromFirestore(){
 }
 
 document.getElementById("saveBtn").addEventListener("click", async ()=>{
-  if(!canEdit(currentUserRole)){
+  if(!currentPerm.edit){
     alert("صلاحيتك عرض فقط — لا يمكنك حفظ تعديلات على المنتجات والأسعار.");
     return;
   }
@@ -422,14 +431,16 @@ onAuthStateChanged(auth, async user=>{
     adminArea.style.display = "block";
     document.getElementById("adminEmail").textContent = user.email;
 
-    currentUserRole = await ensureUserProfile(db, user);
-    applyRoleBodyClass(currentUserRole);
+    currentPerm = await getMyPermission(db, user, PAGE_PRODUCTS);
+    applyPermissionBodyClass(currentPerm);
     const roleBadge = document.getElementById("roleBadge");
-    roleBadge.textContent = roleLabel(currentUserRole);
+    roleBadge.textContent = roleLabel(currentPerm.role);
     roleBadge.classList.remove("role-view", "role-edit");
-    roleBadge.classList.add(currentUserRole === ROLE_EDIT ? "role-edit" : "role-view");
+    roleBadge.classList.add(currentPerm.edit ? "role-edit" : "role-view");
 
-    await loadFromFirestore();
+    if(currentPerm.read){
+      await loadFromFirestore();
+    }
   } else {
     loginPanel.style.display = "block";
     adminArea.style.display = "none";
