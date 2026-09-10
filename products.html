@@ -31,6 +31,17 @@
     padding:6px 14px; border-radius:20px;
   }
   .nav-link:hover{background:#eaf7fb;}
+  .admin-nav{display:flex; gap:8px; margin-inline-start:auto; flex-wrap:wrap;}
+  .admin-nav .nav-link{margin-inline-start:0;}
+  .admin-nav .nav-link.current{background:var(--brand); color:#fff;}
+  .role-badge{
+    display:inline-block; font-size:11px; font-weight:700; border-radius:20px;
+    padding:2px 10px; margin-inline-start:8px;
+  }
+  .role-badge.role-edit{background:#e6f4ea; color:#1e7e34;}
+  .role-badge.role-view{background:#eef3f7; color:var(--brand-dark);}
+  body.role-view .needs-edit{display:none !important;}
+  body.role-view input, body.role-view select{pointer-events:none; opacity:.65;}
   .prod-table input[type=text]{
     width:100%; padding:5px 6px; border:1px solid #cdd9de; border-radius:6px;
     font-family:'Cairo',sans-serif; font-size:12.5px; text-align:right; background:#fff;
@@ -81,8 +92,12 @@
     <h1>كشف المنتجات والأسعار</h1>
     <p>صفحة الأدمن لتعديل بيانات المنتجات — التعديلات تنعكس تلقائيًا على حاسبة العرض</p>
   </div>
-  <a class="nav-link" href="index.html">↩ الذهاب إلى حاسبة العرض</a>
-  <a class="nav-link" href="admin-quotations.html">🧾 عروض الأسعار المحفوظة</a>
+  <div class="admin-nav">
+    <a class="nav-link" href="admin-quotations.html">عروض الأسعار</a>
+    <a class="nav-link current" href="products.html">المنتجات والأسعار</a>
+    <a class="nav-link" href="users.html">المستخدمون والصلاحيات</a>
+    <a class="nav-link" href="index.html">↩ حاسبة العرض</a>
+  </div>
 </header>
 
 <div class="wrap">
@@ -104,6 +119,7 @@
   <div id="adminArea">
   <p class="status-banner" id="adminStatus">
     مسجّل دخول كـ <span id="adminEmail"></span>
+    <span class="role-badge" id="roleBadge"></span>
     <button class="signout-link" id="signoutBtn">تسجيل خروج</button>
   </p>
 
@@ -116,7 +132,7 @@
       <tbody id="rawBody"></tbody>
     </table>
     <div class="admin-actions">
-      <button class="btn secondary" id="addRawBtn">+ إضافة منتج جديد</button>
+      <button class="btn secondary needs-edit" id="addRawBtn">+ إضافة منتج جديد</button>
     </div>
   </div>
 
@@ -129,7 +145,7 @@
       <tbody id="mixBody"></tbody>
     </table>
     <div class="admin-actions">
-      <button class="btn secondary" id="addMixBtn">+ إضافة خلطة جديدة</button>
+      <button class="btn secondary needs-edit" id="addMixBtn">+ إضافة خلطة جديدة</button>
     </div>
   </div>
 
@@ -142,7 +158,7 @@
       <tbody id="auxBody"></tbody>
     </table>
     <div class="admin-actions">
-      <button class="btn secondary" id="addAuxBtn">+ إضافة مادة مساعدة جديدة</button>
+      <button class="btn secondary needs-edit" id="addAuxBtn">+ إضافة مادة مساعدة جديدة</button>
     </div>
   </div>
 
@@ -154,9 +170,9 @@
       تلقائيًا لكل من يفتح صفحة الحاسبة — بدون تنزيل أو رفع أي ملفات.
     </div>
     <div class="admin-actions">
-      <button class="btn" id="saveBtn">💾 حفظ في قاعدة البيانات</button>
-      <button class="btn secondary" id="reloadBtn">↺ تجاهل التعديلات وإعادة التحميل من قاعدة البيانات</button>
-      <button class="btn secondary" id="seedBtn">استخدام القيم الافتراضية (Seed)</button>
+      <button class="btn needs-edit" id="saveBtn">💾 حفظ في قاعدة البيانات</button>
+      <button class="btn secondary needs-edit" id="reloadBtn">↺ تجاهل التعديلات وإعادة التحميل من قاعدة البيانات</button>
+      <button class="btn secondary needs-edit" id="seedBtn">استخدام القيم الافتراضية (Seed)</button>
       <span class="save-flash" id="saveFlash">✓ تم الحفظ بنجاح</span>
     </div>
   </div>
@@ -171,6 +187,9 @@ import { db, auth, PRODUCTS_DOC_PATH } from "./firebase-config.js";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { rawProducts, auxMaterials, mixtures, applyProductsData, computeMixPrice, getName, DEFAULT_DATA } from "./defaults.js";
+import { ROLE_EDIT, roleLabel, canEdit, ensureUserProfile, applyRoleBodyClass } from "./roles.js";
+
+let currentUserRole = null;
 
 const docRef = doc(db, ...PRODUCTS_DOC_PATH);
 
@@ -203,7 +222,7 @@ function renderRaw(){
       <td><input type="text" value="${p.cat}" data-field="cat"></td>
       <td><input type="number" step="0.01" value="${p.price}" data-field="price" class="price-input"></td>
       <td><input type="number" step="0.01" value="${p.coverage}" data-field="coverage" class="coverage-edit"></td>
-      <td><button class="row-delete" title="حذف">✕</button></td>`;
+      <td><button class="row-delete needs-edit" title="حذف">✕</button></td>`;
     tr.querySelectorAll("input").forEach(inp=>{
       inp.addEventListener("input", e=>{
         const field = e.target.dataset.field;
@@ -229,7 +248,7 @@ function renderAux(){
       <td><input type="text" value="${a.name}" data-field="name"></td>
       <td style="color:var(--ink-soft); font-size:11px;">مادة مساعدة (غير مطروحة كخيار مباشر)</td>
       <td><input type="number" step="0.01" value="${a.price}" data-field="price" class="price-input"></td>
-      <td><button class="row-delete" title="حذف">✕</button></td>`;
+      <td><button class="row-delete needs-edit" title="حذف">✕</button></td>`;
     tr.querySelectorAll("input").forEach(inp=>{
       inp.addEventListener("input", e=>{
         const field = e.target.dataset.field;
@@ -257,7 +276,7 @@ function renderMixtures(){
         <span>${getName(c.key)}</span>
         <input type="number" step="0.1" value="${c.ratio}" data-mix="${m.key}" data-ci="${ci}" class="ratio-edit-input">
         <span>جزء</span>
-        <button class="comp-remove" data-mix="${m.key}" data-ci="${ci}" title="إزالة المكوّن">✕</button>
+        <button class="comp-remove needs-edit" data-mix="${m.key}" data-ci="${ci}" title="إزالة المكوّن">✕</button>
       </div>`).join("");
     const candidateOptions = ingredientCandidates()
       .filter(ing=>!m.composition.some(c=>c.key===ing.key))
@@ -267,7 +286,7 @@ function renderMixtures(){
       <td>
         <input type="text" value="${m.cat}" data-field="cat" data-mix="${m.key}" class="mix-cat-input" style="margin-bottom:4px;">
         ${compLines}
-        <div class="comp-add-line">
+        <div class="comp-add-line needs-edit">
           <select class="comp-add-select" data-mix="${m.key}">
             <option value="">-- إضافة مكوّن --</option>
             ${candidateOptions}
@@ -276,7 +295,7 @@ function renderMixtures(){
       </td>
       <td class="mix-price">${fmt(computeMixPrice(m))}</td>
       <td><input type="number" step="0.01" value="${m.coverage}" data-field="coverage" data-mix="${m.key}" class="coverage-edit mix-coverage-input"></td>
-      <td><button class="row-delete" data-mix="${m.key}" title="حذف">✕</button></td>`;
+      <td><button class="row-delete needs-edit" data-mix="${m.key}" title="حذف">✕</button></td>`;
     mixBody.appendChild(tr);
   });
 
@@ -366,6 +385,10 @@ async function loadFromFirestore(){
 }
 
 document.getElementById("saveBtn").addEventListener("click", async ()=>{
+  if(!canEdit(currentUserRole)){
+    alert("صلاحيتك عرض فقط — لا يمكنك حفظ تعديلات على المنتجات والأسعار.");
+    return;
+  }
   try{
     await setDoc(docRef, {rawProducts, auxMaterials, mixtures});
     flash("تم الحفظ — الأسعار ستظهر لكل المستخدمين الآن");
@@ -398,6 +421,14 @@ onAuthStateChanged(auth, async user=>{
     loginPanel.style.display = "none";
     adminArea.style.display = "block";
     document.getElementById("adminEmail").textContent = user.email;
+
+    currentUserRole = await ensureUserProfile(db, user);
+    applyRoleBodyClass(currentUserRole);
+    const roleBadge = document.getElementById("roleBadge");
+    roleBadge.textContent = roleLabel(currentUserRole);
+    roleBadge.classList.remove("role-view", "role-edit");
+    roleBadge.classList.add(currentUserRole === ROLE_EDIT ? "role-edit" : "role-view");
+
     await loadFromFirestore();
   } else {
     loginPanel.style.display = "block";
