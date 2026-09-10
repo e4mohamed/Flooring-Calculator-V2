@@ -122,7 +122,16 @@ export function permissionFor(role, pageKey){
 export async function ensureUserProfile(db, user){
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
-  if(snap.exists()) return { id: user.uid, ...snap.data() };
+  if(snap.exists()){
+    const data = snap.data();
+    // backward compatibility: an earlier version of this app stored a
+    // plain "role" string ("view"/"edit") directly on the user doc,
+    // before the "roles" collection existed. If a doc still only has
+    // that old field (no "roleId"), treat it as pointing at the
+    // same-named role doc, so existing users keep working unchanged.
+    const roleId = data.roleId || data.role || "view";
+    return { id: user.uid, ...data, roleId };
+  }
   const profile = { email: user.email || "", roleId: "view", createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
   await setDoc(ref, profile);
   return { id: user.uid, ...profile };
@@ -145,7 +154,10 @@ export async function createUserDoc(db, uid, email, roleId){
 export async function fetchAllUsers(db){
   const snap = await getDocs(collection(db, "users"));
   const users = [];
-  snap.forEach(d=> users.push({ id: d.id, ...d.data() }));
+  snap.forEach(d=>{
+    const data = d.data();
+    users.push({ id: d.id, ...data, roleId: data.roleId || data.role || "view" });
+  });
   users.sort((a,b)=> (a.email||"").localeCompare(b.email||""));
   return users;
 }
