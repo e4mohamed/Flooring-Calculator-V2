@@ -251,7 +251,7 @@ function renderSystemGroup(list, container){
           <td>${step.desc}</td>
           <td><input type="number" step="0.01" class="coverage-input" value="${step.coverage}"></td>
           <td class="qty-cell"></td>
-          <td class="price-cell"><input type="number" step="0.01" min="0" class="coverage-input price-input" title="اضغط لتعديل السعر الافتراضي"></td>
+          <td class="price-cell"><input type="number" step="0.01" min="0" class="price-input" title="اضغط لتعديل السعر الافتراضي"></td>
           <td class="cost-cell"></td>
         </tr>`;
     });
@@ -459,7 +459,7 @@ recalcAll();
       statusEl.textContent = "لا توجد بيانات محفوظة بعد — يتم عرض القيم الافتراضية";
     }
   }catch(err){
-    console.error("تعذر تحميل بيانات الأسعار المحدثة:", err);
+    console.error("تعذر تحميل بيانات الأسعار الحيّة:", err);
     if(statusEl) statusEl.textContent = "⚠ أنت غير متصل بالإنترنت — يتم عرض القيم الافتراضية المحفوظة على الجهاز";
   }
 })();
